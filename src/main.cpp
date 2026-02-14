@@ -55,11 +55,20 @@ int main(int argc, char *argv[])
         );
         
         // Show user-friendly warning with proper parent window
-        QMessageBox::warning(&w, QObject::tr("样式表加载失败"),
-            QObject::tr("无法加载自定义样式表，将使用默认样式。\n\n"
-                      "这可能是因为资源文件未正确编译到程序中。\n"
-                      "请确保使用CMake重新编译项目，并且resources.qrc文件已正确配置。\n\n"
-                      "程序仍可正常运行，但界面可能显示为默认样式。"));
+        // Check if window is valid to prevent crash if MainWindow initialization failed
+        if (w.isVisible()) {
+            QMessageBox::warning(&w, QObject::tr("样式表加载失败"),
+                QObject::tr("无法加载自定义样式表，将使用默认样式。\n\n"
+                          "这可能是因为资源文件未正确编译到程序中。\n"
+                          "请确保使用CMake重新编译项目，并且resources.qrc文件已正确配置。\n\n"
+                          "程序仍可正常运行，但界面可能显示为默认样式。"));
+        } else {
+            QMessageBox::warning(nullptr, QObject::tr("样式表加载失败"),
+                QObject::tr("无法加载自定义样式表，将使用默认样式。\n\n"
+                          "这可能是因为资源文件未正确编译到程序中。\n"
+                          "请确保使用CMake重新编译项目，并且resources.qrc文件已正确配置。\n\n"
+                          "程序仍可正常运行，但界面可能显示为默认样式。"));
+        }
     }
     
     return a.exec();
