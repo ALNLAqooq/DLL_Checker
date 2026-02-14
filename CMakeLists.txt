@@ -33,6 +33,7 @@ set(SOURCES
     src/scanworker.cpp
     src/inputvalidator.cpp
     src/logger.cpp
+    resources/resources.qrc
 )
 
 # Header files

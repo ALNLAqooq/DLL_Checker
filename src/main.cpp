@@ -4,6 +4,8 @@
 #include <QTranslator>
 #include <QLocale>
 #include <QMetaType>
+#include <QFile>
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +19,16 @@ int main(int argc, char *argv[])
     QString locale = QLocale::system().name();
     if (translator->load("dllchecker_" + locale, ":/translations")) {
         a.installTranslator(translator);
+    }
+    
+    // Load and apply stylesheet
+    QFile styleFile(":/style/style.qss");
+    if (styleFile.open(QFile::ReadOnly)) {
+        QString style = QString::fromUtf8(styleFile.readAll());
+        a.setStyleSheet(style);
+        styleFile.close();
+    } else {
+        qDebug() << "Warning: Could not load stylesheet from :/style/style.qss";
     }
     
     MainWindow w;

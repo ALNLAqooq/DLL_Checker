@@ -67,19 +67,25 @@ void MainWindow::setupUI()
     
     // Create toolbar
     m_toolBar = addToolBar(tr("主工具栏"));
+    m_toolBar->setMovable(false);
+    m_toolBar->setFloatable(false);
     
-    QAction* scanDirAction = m_toolBar->addAction(tr("扫描文件夹"));
+    QAction* scanDirAction = m_toolBar->addAction(QIcon(":/icons/folder.svg"), tr("扫描文件夹"));
+    scanDirAction->setToolTip(tr("扫描整个文件夹中的DLL依赖关系"));
     connect(scanDirAction, &QAction::triggered, this, &MainWindow::onScanDirectory);
     
-    QAction* scanFileAction = m_toolBar->addAction(tr("扫描文件"));
+    QAction* scanFileAction = m_toolBar->addAction(QIcon(":/icons/file.svg"), tr("扫描文件"));
+    scanFileAction->setToolTip(tr("扫描单个文件的DLL依赖关系"));
     connect(scanFileAction, &QAction::triggered, this, &MainWindow::onScanSingleFile);
     
     m_toolBar->addSeparator();
     
-    QAction* importReportAction = m_toolBar->addAction(tr("导入差异报告"));
+    QAction* importReportAction = m_toolBar->addAction(QIcon(":/icons/import.svg"), tr("导入差异报告"));
+    importReportAction->setToolTip(tr("导入目标机的缺失DLL报告"));
     connect(importReportAction, &QAction::triggered, this, &MainWindow::onImportMissingReport);
     
-    QAction* exportMissingAction = m_toolBar->addAction(tr("导出缺失报告"));
+    QAction* exportMissingAction = m_toolBar->addAction(QIcon(":/icons/export.svg"), tr("导出缺失报告"));
+    exportMissingAction->setToolTip(tr("导出当前扫描结果的缺失DLL报告"));
     connect(exportMissingAction, &QAction::triggered, this, &MainWindow::onExportMissingReport);
     
     // 隐藏旧的导出报告功能（新工作流程不需要）
@@ -88,12 +94,14 @@ void MainWindow::setupUI()
     
     m_toolBar->addSeparator();
     
-    QAction* autoCollectAction = m_toolBar->addAction(tr("一键补齐"));
+    QAction* autoCollectAction = m_toolBar->addAction(QIcon(":/icons/download.svg"), tr("一键补齐"));
+    autoCollectAction->setToolTip(tr("自动收集并复制高亮的缺失DLL"));
     connect(autoCollectAction, &QAction::triggered, this, &MainWindow::onAutoCollectDLLs);
     
     m_toolBar->addSeparator();
     
-    QAction* clearAllAction = m_toolBar->addAction(tr("一键清空"));
+    QAction* clearAllAction = m_toolBar->addAction(QIcon(":/icons/clear.svg"), tr("一键清空"));
+    clearAllAction->setToolTip(tr("清空所有扫描结果"));
     connect(clearAllAction, &QAction::triggered, this, &MainWindow::onClearAll);
     
     m_toolBar->addSeparator();
@@ -101,17 +109,20 @@ void MainWindow::setupUI()
     // Add checkbox for showing system DLLs
     m_showSystemDLLs = new QCheckBox(tr("显示系统DLL"), this);
     m_showSystemDLLs->setChecked(false);
+    m_showSystemDLLs->setToolTip(tr("是否显示系统DLL文件"));
     m_toolBar->addWidget(m_showSystemDLLs);
     
     // Add checkbox for recursive scanning
     m_recursiveScan = new QCheckBox(tr("递归扫描"), this);
     m_recursiveScan->setChecked(true);
+    m_recursiveScan->setToolTip(tr("是否递归扫描子文件夹"));
     m_toolBar->addWidget(m_recursiveScan);
 
     m_toolBar->addSeparator();
 
-    QAction* cancelAction = m_toolBar->addAction(tr("取消扫描"));
+    QAction* cancelAction = m_toolBar->addAction(QIcon(":/icons/cancel.svg"), tr("取消扫描"));
     cancelAction->setEnabled(false);
+    cancelAction->setToolTip(tr("取消当前正在进行的扫描"));
     connect(cancelAction, &QAction::triggered, this, &MainWindow::onCancelScan);
 
     cancelAction->setObjectName("cancelAction");
@@ -129,6 +140,10 @@ void MainWindow::setupUI()
                                                 << tr("状态"));
     m_treeWidget->setColumnWidth(0, 250);
     m_treeWidget->setColumnWidth(1, 350);
+    m_treeWidget->setAnimated(true);
+    m_treeWidget->setIndentation(20);
+    m_treeWidget->setRootIsDecorated(true);
+    m_treeWidget->setStyleSheet("");
     connect(m_treeWidget, &QTreeWidget::itemClicked,
             this, &MainWindow::onTreeItemClicked);
     
