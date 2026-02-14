@@ -22,6 +22,10 @@ int main(int argc, char *argv[])
         a.installTranslator(translator);
     }
     
+    // Create main window first
+    MainWindow w;
+    w.show();
+    
     // Load and apply stylesheet
     QFile styleFile(":/style/style.qss");
     if (styleFile.open(QFile::ReadOnly)) {
@@ -50,15 +54,13 @@ int main(int argc, char *argv[])
             "QProgressBar::chunk { background-color: #3b82f6; border-radius: 3px; }"
         );
         
-        // Show user-friendly warning
-        QMessageBox::warning(nullptr, QObject::tr("样式表加载失败"),
+        // Show user-friendly warning with proper parent window
+        QMessageBox::warning(&w, QObject::tr("样式表加载失败"),
             QObject::tr("无法加载自定义样式表，将使用默认样式。\n\n"
                       "这可能是因为资源文件未正确编译到程序中。\n"
                       "请确保使用CMake重新编译项目，并且resources.qrc文件已正确配置。\n\n"
                       "程序仍可正常运行，但界面可能显示为默认样式。"));
     }
     
-    MainWindow w;
-    w.show();
     return a.exec();
 }
