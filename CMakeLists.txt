@@ -33,7 +33,7 @@ set(SOURCES
     src/scanworker.cpp
     src/inputvalidator.cpp
     src/logger.cpp
-    resources/resources.qrc
+    ${CMAKE_SOURCE_DIR}/resources/resources.qrc
 )
 
 # Header files
