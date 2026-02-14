@@ -69,6 +69,7 @@ void MainWindow::setupUI()
     m_toolBar = addToolBar(tr("主工具栏"));
     m_toolBar->setMovable(false);
     m_toolBar->setFloatable(false);
+    m_toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     
     QAction* scanDirAction = m_toolBar->addAction(QIcon(":/icons/folder.svg"), tr("扫描文件夹"));
     scanDirAction->setToolTip(tr("扫描整个文件夹中的DLL依赖关系"));

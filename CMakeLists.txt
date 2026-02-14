@@ -10,7 +10,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt5
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets Gui Concurrent)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets Gui Concurrent Svg)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -33,7 +33,7 @@ set(SOURCES
     src/scanworker.cpp
     src/inputvalidator.cpp
     src/logger.cpp
-    ${CMAKE_SOURCE_DIR}/resources/resources.qrc
+    resources/resources.qrc
 )
 
 # Header files
@@ -59,6 +59,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt5::Widgets
     Qt5::Gui
     Qt5::Concurrent
+    Qt5::Svg
 )
 
 # Link Windows libraries

@@ -7,10 +7,20 @@
 #include <QFile>
 #include <QDebug>
 #include <QMessageBox>
+#include <QDir>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    
+    // Initialize resources
+    Q_INIT_RESOURCE(resources);
+    
+    // Debug: List all available resources
+    QDir resourceDir(":/");
+    qDebug() << "Root resources:" << resourceDir.entryList();
+    QDir iconsDir(":/icons");
+    qDebug() << "Icons resources:" << iconsDir.entryList();
     
     // Register custom types for signal-slot communication
     qRegisterMetaType<QList<DependencyScanner::DependencyNode*>>("QList<DependencyScanner::DependencyNode*>");
@@ -27,14 +37,14 @@ int main(int argc, char *argv[])
     w.show();
     
     // Load and apply stylesheet
-    QFile styleFile(":/style/style.qss");
+    QFile styleFile(":/style.qss");
     if (styleFile.open(QFile::ReadOnly)) {
         QString style = QString::fromUtf8(styleFile.readAll());
         a.setStyleSheet(style);
         styleFile.close();
         qDebug() << "Stylesheet loaded successfully";
     } else {
-        qDebug() << "Warning: Could not load stylesheet from :/style/style.qss";
+        qDebug() << "Warning: Could not load stylesheet from :/style.qss";
         // Apply a basic fallback stylesheet
         a.setStyleSheet(
             "QMainWindow { background-color: #f5f7fa; }"

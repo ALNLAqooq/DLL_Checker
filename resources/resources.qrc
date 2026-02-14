@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/icons">
+    <qresource prefix="/">
         <file>icons/folder.svg</file>
         <file>icons/file.svg</file>
         <file>icons/import.svg</file>
@@ -10,8 +10,6 @@
         <file>icons/check.svg</file>
         <file>icons/branch-closed.svg</file>
         <file>icons/branch-open.svg</file>
-    </qresource>
-    <qresource prefix="/style">
         <file>style.qss</file>
     </qresource>
 </RCC>
