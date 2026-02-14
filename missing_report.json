@@ -1,0 +1,23 @@
+{
+    "generated_time": "2026-01-14T20:44:23",
+    "missing_dlls": [
+        "pcl_surface.dll",
+        "pcl_segmentation.dll",
+        "pcl_sample_consensus.dll",
+        "pcl_filters.dll",
+        "pcl_search.dll",
+        "pcl_kdtree.dll",
+        "pcl_common.dll",
+        "libwebpdecoder.dll",
+        "libwebp.dll",
+        "libpng16.dll",
+        "tiff.dll",
+        "GxIAPICPPEx.dll",
+        "libwinpthread-1.dll",
+        "cudnn64_8.dll",
+        "gvt_compute_photo.dll",
+        "gvt_lm.dll",
+        "HXMachineVision.dll"
+    ],
+    "target_machine": "WIN-4SRJLRKBMOI"
+}

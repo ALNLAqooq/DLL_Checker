@@ -1,0 +1,68 @@
+# Build directories
+build/
+Release/
+Debug/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+CMakeLists.txt.user
+
+# Qt Creator
+*.autosave
+*.pro.user
+*.qmlc
+*.jsc
+
+# Qt compiled files
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Ninja build files
+.ninja_deps
+.ninja_log
+.ninja_log.*
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.user
+
+# Clangd
+.qtc_clangd/
+.cache/
+
+# Debug files
+*.pdb
+*.ilk
+*.exp
+
+# Package manager
+.vcpkg/
+conan/
+
+# Test results
+Testing/
+
+# Kiro tool
+.kiro/
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
