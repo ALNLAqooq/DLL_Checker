@@ -4,11 +4,12 @@
 #include <QObject>
 #include <QString>
 #include <QList>
-#include <QMap>
+#include <QHash>
 #include <QSet>
 #include <QMutex>
+#include <QSharedPointer>
+#include <QWeakPointer>
 #include <memory>
-#include <vector>
 #include "peparser.h"
 
 class DependencyScanner : public QObject
@@ -24,28 +25,33 @@ public:
         QString productVersion;
         bool exists;
         bool archMismatch;
-        std::vector<std::unique_ptr<DependencyNode>> children;
-        DependencyNode* parent;
+        QList<QSharedPointer<DependencyNode>> children;
+        QWeakPointer<DependencyNode> parent;
         int depth;
         
         DependencyNode() : arch(PEParser::Unknown), exists(false), 
-                          archMismatch(false), parent(nullptr), depth(0) {}
+                          archMismatch(false), depth(0) {}
     };
+
+    using NodePtr = QSharedPointer<DependencyNode>;
 
     explicit DependencyScanner(QObject *parent = nullptr);
     ~DependencyScanner();
 
     // Scan a single file
-    DependencyNode* scanFile(const QString& filePath, bool includeSystemDLLs = false);
+    // Returned nodes are shared via QSharedPointer.
+    NodePtr scanFile(const QString& filePath, bool includeSystemDLLs = false);
     
     // Scan a directory for all DLL and EXE files
-    QList<DependencyNode*> scanDirectory(const QString& dirPath, bool recursive = false, bool includeSystemDLLs = false);
+    // Returned nodes are shared via QSharedPointer.
+    QList<NodePtr> scanDirectory(const QString& dirPath, bool recursive = false, bool includeSystemDLLs = false);
     
     // Scan a directory with parallel processing
-    QList<DependencyNode*> scanDirectoryParallel(const QString& dirPath, bool recursive = false, bool includeSystemDLLs = false, int threadCount = 4);
+    // Returned nodes are shared via QSharedPointer.
+    QList<NodePtr> scanDirectoryParallel(const QString& dirPath, bool recursive = false, bool includeSystemDLLs = false, int threadCount = 4);
     
     // Check for circular dependencies
-    bool hasCircularDependency(DependencyNode* node);
+    bool hasCircularDependency(const NodePtr& node);
 
     // Clear cache
     void clearCache();
@@ -61,12 +67,12 @@ signals:
     void scanCompleted();
 
 private:
-    DependencyNode* scanFileRecursive(const QString& filePath, const QString& appDir,
-                                     DependencyNode* parent, int depth, bool includeSystemDLLs);
-    DependencyNode* scanFileWithCustomStack(const QString& filePath, const QString& appDir,
-                                           DependencyNode* parent, int depth, bool includeSystemDLLs,
-                                           QStringList& customStack, QSet<QString>& customSet);
-    QMap<QString, DependencyNode*> m_cache;
+    NodePtr scanFileRecursive(const QString& filePath, const QString& appDir,
+                             const NodePtr& parent, int depth, bool includeSystemDLLs);
+    NodePtr scanFileWithCustomStack(const QString& filePath, const QString& appDir,
+                                   const NodePtr& parent, int depth, bool includeSystemDLLs,
+                                   QStringList& customStack, QSet<QString>& customSet);
+    QHash<QString, QWeakPointer<DependencyNode>> m_cache;
     QMutex m_cacheMutex;
     QStringList m_scanningStack;
     QSet<QString> m_scanningSet;
@@ -74,7 +80,7 @@ private:
     QAtomicInt m_cancelled;
 };
 
-Q_DECLARE_METATYPE(DependencyScanner::DependencyNode*)
-Q_DECLARE_METATYPE(QList<DependencyScanner::DependencyNode*>)
+Q_DECLARE_METATYPE(DependencyScanner::NodePtr)
+Q_DECLARE_METATYPE(QList<DependencyScanner::NodePtr>)
 
 #endif // DEPENDENCYSCANNER_H

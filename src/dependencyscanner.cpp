@@ -1,4 +1,4 @@
-#include "dependencyscanner.h"
+﻿#include "dependencyscanner.h"
 #include "peparser.h"
 #include "pathresolver.h"
 #include "logger.h"
@@ -26,16 +26,16 @@ DependencyScanner::~DependencyScanner()
     clearCache();
 }
 
-static DependencyScanner::DependencyNode* cloneNodeShallow(
+static DependencyScanner::NodePtr cloneNodeShallow(
     const DependencyScanner::DependencyNode* src,
-    DependencyScanner::DependencyNode* parent,
+    const DependencyScanner::NodePtr& parent,
     int depth)
 {
     if (!src) {
-        return nullptr;
+        return DependencyScanner::NodePtr();
     }
 
-    auto* node = new DependencyScanner::DependencyNode();
+    DependencyScanner::NodePtr node(new DependencyScanner::DependencyNode());
     node->filePath = src->filePath;
     node->fileName = src->fileName;
     node->arch = src->arch;
@@ -49,7 +49,34 @@ static DependencyScanner::DependencyNode* cloneNodeShallow(
     return node;
 }
 
-DependencyScanner::DependencyNode* DependencyScanner::scanFile(const QString& filePath, bool includeSystemDLLs)
+static DependencyScanner::NodePtr cloneNodeDeep(
+    const DependencyScanner::DependencyNode* src,
+    const DependencyScanner::NodePtr& parent,
+    int depth)
+{
+    if (!src) {
+        return DependencyScanner::NodePtr();
+    }
+
+    DependencyScanner::NodePtr node = cloneNodeShallow(src, parent, depth);
+    if (!node) {
+        return DependencyScanner::NodePtr();
+    }
+
+    for (const auto& child : src->children) {
+        if (!child) {
+            continue;
+        }
+        DependencyScanner::NodePtr childClone =
+            cloneNodeDeep(child.data(), node, depth + 1);
+        if (childClone) {
+            node->children.append(childClone);
+        }
+    }
+
+    return node;
+}
+DependencyScanner::NodePtr DependencyScanner::scanFile(const QString& filePath, bool includeSystemDLLs)
 {
     clearCache();
     m_scanningStack.clear();
@@ -58,12 +85,12 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFile(const QString& fi
     QFileInfo fileInfo(filePath);
     QString appDir = fileInfo.absolutePath();
     
-    return scanFileRecursive(filePath, appDir, nullptr, 0, includeSystemDLLs);
+    return scanFileRecursive(filePath, appDir, NodePtr(), 0, includeSystemDLLs);
 }
 
-QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectory(const QString& dirPath, bool recursive, bool includeSystemDLLs)
+QList<DependencyScanner::NodePtr> DependencyScanner::scanDirectory(const QString& dirPath, bool recursive, bool includeSystemDLLs)
 {
-    QList<DependencyNode*> results;
+    QList<NodePtr> results;
     clearCache();
     m_scanningStack.clear();
     m_scanningSet.clear();
@@ -101,7 +128,7 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectory(const
         m_scanningSet.clear();
 
         const QString appDir = QFileInfo(filePath).absolutePath();
-        DependencyNode* node = scanFileRecursive(filePath, appDir, nullptr, 0, includeSystemDLLs);
+        NodePtr node = scanFileRecursive(filePath, appDir, NodePtr(), 0, includeSystemDLLs);
         if (node) {
             results.append(node);
         }
@@ -111,11 +138,11 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectory(const
     return results;
 }
 
-QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectoryParallel(const QString& dirPath, bool recursive, bool includeSystemDLLs, int threadCount)
+QList<DependencyScanner::NodePtr> DependencyScanner::scanDirectoryParallel(const QString& dirPath, bool recursive, bool includeSystemDLLs, int threadCount)
 {
     LOG_INFO("DependencyScanner", QString("开始并行扫描目录: %1 (线程数: %2)").arg(dirPath).arg(threadCount));
     
-    QList<DependencyNode*> results;
+    QList<NodePtr> results;
     clearCache();
     m_scanningStack.clear();
     m_scanningSet.clear();
@@ -153,7 +180,7 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectoryParall
     public:
         ScanTask(const QString& filePath, DependencyScanner* scanner, 
                  bool includeSystemDLLs, QAtomicInt* current, int total,
-                 QMutex* resultMutex, QList<DependencyNode*>* results)
+                 QMutex* resultMutex, QList<NodePtr>* results)
             : m_filePath(filePath), m_scanner(scanner), 
               m_includeSystemDLLs(includeSystemDLLs), 
               m_current(current), m_total(total),
@@ -175,8 +202,8 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectoryParall
             QSet<QString> threadSet;
             QString appDir = QFileInfo(m_filePath).absolutePath();
             
-            DependencyNode* node = m_scanner->scanFileWithCustomStack(
-                m_filePath, appDir, nullptr, 0, m_includeSystemDLLs, threadStack, threadSet);
+            NodePtr node = m_scanner->scanFileWithCustomStack(
+                m_filePath, appDir, NodePtr(), 0, m_includeSystemDLLs, threadStack, threadSet);
             
             if (node) {
                 QMutexLocker locker(m_resultMutex);
@@ -191,7 +218,7 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectoryParall
         QAtomicInt* m_current;
         int m_total;
         QMutex* m_resultMutex;
-        QList<DependencyNode*>* m_results;
+        QList<NodePtr>* m_results;
     };
     
     QList<ScanTask*> tasks;
@@ -215,10 +242,10 @@ QList<DependencyScanner::DependencyNode*> DependencyScanner::scanDirectoryParall
     return results;
 }
 
-DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
+DependencyScanner::NodePtr DependencyScanner::scanFileWithCustomStack(
     const QString& filePath,
     const QString& appDir,
-    DependencyNode* parent,
+    const DependencyScanner::NodePtr& parent,
     int depth,
     bool includeSystemDLLs,
     QStringList& customStack,
@@ -226,21 +253,21 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
 {
     // Check for cancellation
     if (isCancelled()) {
-        return nullptr;
+        return NodePtr();
     }
 
     // Limit recursion depth to prevent stack overflow
     const int MAX_DEPTH = 50;
     if (depth > MAX_DEPTH) {
         LOG_DEBUG("DependencyScanner", QString("达到最大递归深度: %1").arg(filePath));
-        return nullptr;
+        return NodePtr();
     }
 
     // Check for circular dependency
     QString lowerPath = filePath.toLower();
     if (customSet.contains(lowerPath)) {
         LOG_DEBUG("DependencyScanner", QString("检测到循环依赖: %1").arg(filePath));
-        DependencyNode* node = new DependencyNode();
+        NodePtr node(new DependencyNode());
         node->filePath = filePath;
         node->fileName = QFileInfo(filePath).fileName();
         node->exists = true;
@@ -253,8 +280,10 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
     {
         QMutexLocker locker(&m_cacheMutex);
         if (m_cache.contains(lowerPath)) {
-            DependencyNode* cached = m_cache[lowerPath];
-            return cloneNodeShallow(cached, parent, depth);
+            QSharedPointer<DependencyNode> cached = m_cache.value(lowerPath).toStrongRef();
+            if (cached) {
+                return cloneNodeDeep(cached.data(), parent, depth);
+            }
         }
     }
 
@@ -270,7 +299,7 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
     };
 
     // Create node
-    DependencyNode* node = new DependencyNode();
+    NodePtr node(new DependencyNode());
     node->filePath = filePath;
     node->fileName = QFileInfo(filePath).fileName();
     node->parent = parent;
@@ -321,14 +350,14 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
         // Resolve DLL path
         PathResolver::ResolveResult resolveResult = PathResolver::resolveDLLPath(dllName, appDir);
         
-        DependencyNode* childNode = nullptr;
+        NodePtr childNode;
 
         if (resolveResult.found) {
             // Recursively scan the dependency
             childNode = scanFileWithCustomStack(resolveResult.foundPath, appDir, node, depth + 1, includeSystemDLLs, customStack, customSet);
         } else {
             // DLL not found
-            childNode = new DependencyNode();
+            childNode = NodePtr(new DependencyNode());
             childNode->filePath = dllName;
             childNode->fileName = dllName;
             childNode->exists = false;
@@ -337,14 +366,14 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
         }
         
         if (childNode) {
-            node->children.emplace_back(childNode);
+            node->children.append(childNode);
         }
     }
     
     // Cache the node (thread-safe)
     {
         QMutexLocker locker(&m_cacheMutex);
-        m_cache[lowerPath] = node;
+        m_cache.insert(lowerPath, QWeakPointer<DependencyNode>(node));
     }
     
     // Remove from scanning stack
@@ -353,7 +382,7 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileWithCustomStack(
     return node;
 }
 
-bool DependencyScanner::hasCircularDependency(DependencyNode* node)
+bool DependencyScanner::hasCircularDependency(const DependencyScanner::NodePtr& node)
 {
     if (!node) return false;
     
@@ -379,22 +408,22 @@ bool DependencyScanner::isCancelled() const
     return m_cancelled.loadAcquire() != 0;
 }
 
-DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QString& filePath,
+DependencyScanner::NodePtr DependencyScanner::scanFileRecursive(const QString& filePath,
                                                                         const QString& appDir,
-                                                                        DependencyNode* parent,
+                                                                        const DependencyScanner::NodePtr& parent,
                                                                         int depth,
                                                                         bool includeSystemDLLs)
 {
     // Check for cancellation
     if (isCancelled()) {
-        return nullptr;
+        return NodePtr();
     }
 
     // Limit recursion depth to prevent stack overflow
     const int MAX_DEPTH = 50;
     if (depth > MAX_DEPTH) {
         LOG_WARNING("DependencyScanner", QString("达到最大递归深度: %1").arg(filePath));
-        return nullptr;
+        return NodePtr();
     }
 
     // Check for circular dependency
@@ -402,7 +431,7 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QS
     if (m_scanningSet.contains(lowerPath)) {
         // Circular dependency detected
         LOG_WARNING("DependencyScanner", QString("检测到循环依赖: %1").arg(filePath));
-        DependencyNode* node = new DependencyNode();
+        NodePtr node(new DependencyNode());
         node->filePath = filePath;
         node->fileName = QFileInfo(filePath).fileName();
         node->exists = true;
@@ -412,11 +441,16 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QS
     }
 
     // Check cache
-    if (m_cache.contains(lowerPath)) {
-        // Fast path: avoid deep subtree cloning on repeated dependencies.
-        // This keeps scan latency stable for large dependency graphs.
-        DependencyNode* cached = m_cache[lowerPath];
-        return cloneNodeShallow(cached, parent, depth);
+    {
+        QMutexLocker locker(&m_cacheMutex);
+        if (m_cache.contains(lowerPath)) {
+            // Fast path: avoid deep subtree cloning on repeated dependencies.
+            // This keeps scan latency stable for large dependency graphs.
+            QSharedPointer<DependencyNode> cached = m_cache.value(lowerPath).toStrongRef();
+            if (cached) {
+                return cloneNodeDeep(cached.data(), parent, depth);
+            }
+        }
     }
 
     // Add to scanning stack
@@ -431,7 +465,7 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QS
     };
 
     // Create node
-    DependencyNode* node = new DependencyNode();
+    NodePtr node(new DependencyNode());
     node->filePath = filePath;
     node->fileName = QFileInfo(filePath).fileName();
     node->parent = parent;
@@ -488,14 +522,14 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QS
         // Resolve DLL path
         PathResolver::ResolveResult resolveResult = PathResolver::resolveDLLPath(dllName, appDir);
         
-        DependencyNode* childNode = nullptr;
+        NodePtr childNode;
 
         if (resolveResult.found) {
             // Recursively scan the dependency
             childNode = scanFileRecursive(resolveResult.foundPath, appDir, node, depth + 1, includeSystemDLLs);
         } else {
             // DLL not found
-            childNode = new DependencyNode();
+            childNode = NodePtr(new DependencyNode());
             childNode->filePath = dllName;
             childNode->fileName = dllName;
             childNode->exists = false;
@@ -504,12 +538,15 @@ DependencyScanner::DependencyNode* DependencyScanner::scanFileRecursive(const QS
         }
         
         if (childNode) {
-            node->children.emplace_back(childNode);
+            node->children.append(childNode);
         }
     }
     
     // Cache the node
-    m_cache[lowerPath] = node;
+    {
+        QMutexLocker locker(&m_cacheMutex);
+        m_cache.insert(lowerPath, QWeakPointer<DependencyNode>(node));
+    }
     
     // Remove from scanning stack
     popCurrent();

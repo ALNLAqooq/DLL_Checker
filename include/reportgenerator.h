@@ -18,31 +18,31 @@ public:
     };
 
     // Generate missing dependency report
-    static QString generateMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+    static QString generateMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                         ReportFormat format);
 
     // Stream missing dependency report to file (for large datasets)
-    static bool writeMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+    static bool writeMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                   ReportFormat format,
                                   const QString& filePath);
-    static bool writeMissingReportToFile(const QList<DependencyScanner::DependencyNode*>& roots,
+    static bool writeMissingReportToFile(const QList<DependencyScanner::NodePtr>& roots,
                                          ReportFormat format,
                                          QIODevice* device);
     
     // Generate target missing report (only DLL names)
-    static QString generateTargetMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+    static QString generateTargetMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                               ReportFormat format = JSON);
     
     // Generate dependency tree report
-    static QString generateDependencyTreeReport(DependencyScanner::DependencyNode* root,
+    static QString generateDependencyTreeReport(const DependencyScanner::NodePtr& root,
                                                ReportFormat format);
 
 private:
-    static void collectMissingDependencies(DependencyScanner::DependencyNode* node,
+    static void collectMissingDependencies(const DependencyScanner::NodePtr& node,
                                           QMap<QString, QStringList>& missingMap);
-    static void collectMissingDLLsRecursive(DependencyScanner::DependencyNode* node,
+    static void collectMissingDLLsRecursive(const DependencyScanner::NodePtr& node,
                                            QStringList& missingDLLs);
-    static QString generateTreeText(DependencyScanner::DependencyNode* node, int indent);
+    static QString generateTreeText(const DependencyScanner::NodePtr& node, int indent);
 };
 
 #endif // REPORTGENERATOR_H

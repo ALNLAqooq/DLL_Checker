@@ -11,7 +11,7 @@
 #include <QFile>
 #include <QTextStream>
 
-QString ReportGenerator::generateMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+QString ReportGenerator::generateMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                               ReportFormat format)
 {
     QByteArray data;
@@ -31,7 +31,7 @@ QString ReportGenerator::generateMissingReport(const QList<DependencyScanner::De
     return QString::fromUtf8(data);
 }
 
-bool ReportGenerator::writeMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+bool ReportGenerator::writeMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                          ReportFormat format,
                                          const QString& filePath)
 {
@@ -43,7 +43,7 @@ bool ReportGenerator::writeMissingReport(const QList<DependencyScanner::Dependen
     return writeMissingReportToFile(roots, format, &file);
 }
 
-bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::DependencyNode*>& roots,
+bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::NodePtr>& roots,
                                                ReportFormat format,
                                                QIODevice* device)
 {
@@ -52,10 +52,11 @@ bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::De
     }
 
     QTextStream stream(device);
+    stream.setCodec("UTF-8");
 
     // Collect all missing dependencies grouped by DLL name
     QMap<QString, QStringList> missingMap;
-    for (auto* root : roots) {
+    for (const auto& root : roots) {
         collectMissingDependencies(root, missingMap);
     }
 
@@ -136,14 +137,14 @@ bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::De
     return true;
 }
 
-QString ReportGenerator::generateTargetMissingReport(const QList<DependencyScanner::DependencyNode*>& roots,
+QString ReportGenerator::generateTargetMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                                      ReportFormat format)
 {
     // 收集所有缺失的DLL
     QStringList missingDLLs;
-    for (const auto* root : roots) {
+    for (const auto& root : roots) {
         if (root) {
-            collectMissingDLLsRecursive(const_cast<DependencyScanner::DependencyNode*>(root), missingDLLs);
+            collectMissingDLLsRecursive(root, missingDLLs);
         }
     }
     
@@ -213,7 +214,7 @@ QString ReportGenerator::generateTargetMissingReport(const QList<DependencyScann
     return report;
 }
 
-void ReportGenerator::collectMissingDLLsRecursive(DependencyScanner::DependencyNode* node,
+void ReportGenerator::collectMissingDLLsRecursive(const DependencyScanner::NodePtr& node,
                                                   QStringList& missingDLLs)
 {
     if (!node) return;
@@ -227,11 +228,11 @@ void ReportGenerator::collectMissingDLLsRecursive(DependencyScanner::DependencyN
     
     // 递归处理子节点
     for (const auto& child : node->children) {
-        collectMissingDLLsRecursive(child.get(), missingDLLs);
+        collectMissingDLLsRecursive(child, missingDLLs);
     }
 }
 
-QString ReportGenerator::generateDependencyTreeReport(DependencyScanner::DependencyNode* root,
+QString ReportGenerator::generateDependencyTreeReport(const DependencyScanner::NodePtr& root,
                                                      ReportFormat format)
 {
     if (!root) {
@@ -255,14 +256,14 @@ QString ReportGenerator::generateDependencyTreeReport(DependencyScanner::Depende
             
         default: // PlainText
             report = "=== Dependency Tree Report ===\n\n";
-            report += generateTreeText(root, 0);
-            break;
+    report += generateTreeText(root, 0);
+    break;
     }
     
     return report;
 }
 
-void ReportGenerator::collectMissingDependencies(DependencyScanner::DependencyNode* node,
+void ReportGenerator::collectMissingDependencies(const DependencyScanner::NodePtr& node,
                                                 QMap<QString, QStringList>& missingMap)
 {
     if (!node) return;
@@ -285,11 +286,11 @@ void ReportGenerator::collectMissingDependencies(DependencyScanner::DependencyNo
         }
         
         // Recursively collect from children
-        collectMissingDependencies(child.get(), missingMap);
+        collectMissingDependencies(child, missingMap);
     }
 }
 
-QString ReportGenerator::generateTreeText(DependencyScanner::DependencyNode* node, int indent)
+QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node, int indent)
 {
     if (!node) return QString();
     
@@ -321,7 +322,7 @@ QString ReportGenerator::generateTreeText(DependencyScanner::DependencyNode* nod
     
     // Add children
     for (const auto& child : node->children) {
-        result += generateTreeText(child.get(), indent + 1);
+        result += generateTreeText(child, indent + 1);
     }
     
     return result;

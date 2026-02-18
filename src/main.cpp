@@ -23,7 +23,8 @@ int main(int argc, char *argv[])
     qDebug() << "Icons resources:" << iconsDir.entryList();
     
     // Register custom types for signal-slot communication
-    qRegisterMetaType<QList<DependencyScanner::DependencyNode*>>("QList<DependencyScanner::DependencyNode*>");
+    qRegisterMetaType<DependencyScanner::NodePtr>("DependencyScanner::NodePtr");
+    qRegisterMetaType<QList<DependencyScanner::NodePtr>>("QList<DependencyScanner::NodePtr>");
     
     // Load translations - using QApplication's object tree for proper lifetime management
     QTranslator* translator = new QTranslator(&a);

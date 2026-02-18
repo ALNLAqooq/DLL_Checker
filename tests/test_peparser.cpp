@@ -23,7 +23,7 @@ private slots:
 
 private:
     bool createTempPEFile(QTemporaryFile& file, quint16 machine);
-    DependencyScanner::DependencyNode* createNode(const QString& fileName, const QString& filePath, bool exists);
+    DependencyScanner::NodePtr createNode(const QString& fileName, const QString& filePath, bool exists);
 };
 
 bool TestPEParser::createTempPEFile(QTemporaryFile& file, quint16 machine)
@@ -72,11 +72,11 @@ bool TestPEParser::createTempPEFile(QTemporaryFile& file, quint16 machine)
     return true;
 }
 
-DependencyScanner::DependencyNode* TestPEParser::createNode(const QString& fileName,
-                                                            const QString& filePath,
-                                                            bool exists)
+DependencyScanner::NodePtr TestPEParser::createNode(const QString& fileName,
+                                                    const QString& filePath,
+                                                    bool exists)
 {
-    auto* node = new DependencyScanner::DependencyNode();
+    DependencyScanner::NodePtr node(new DependencyScanner::DependencyNode());
     node->fileName = fileName;
     node->filePath = filePath;
     node->exists = exists;
@@ -232,16 +232,16 @@ void TestPEParser::testCorruptedPEHeader()
 
 void TestPEParser::testMissingReportDedupAndRoundTrip()
 {
-    auto* root = createNode("app.exe", "C:/app/app.exe", true);
-    auto* missingA = createNode("vcruntime140.dll", "vcruntime140.dll", false);
-    auto* missingB = createNode("vcruntime140.dll", "vcruntime140.dll", false);
+    auto root = createNode("app.exe", "C:/app/app.exe", true);
+    auto missingA = createNode("vcruntime140.dll", "vcruntime140.dll", false);
+    auto missingB = createNode("vcruntime140.dll", "vcruntime140.dll", false);
 
     missingA->parent = root;
     missingB->parent = root;
-    root->children.emplace_back(missingA);
-    root->children.emplace_back(missingB);
+    root->children.append(missingA);
+    root->children.append(missingB);
 
-    QList<DependencyScanner::DependencyNode*> roots;
+    QList<DependencyScanner::NodePtr> roots;
     roots.append(root);
 
     const ComparisonEngine::MissingReport report = ComparisonEngine::generateMissingReport(roots);
@@ -258,34 +258,31 @@ void TestPEParser::testMissingReportDedupAndRoundTrip()
     QCOMPARE(loaded.missingDLLs.size(), 1);
     QCOMPARE(loaded.missingDLLs.first().toLower(), QString("vcruntime140.dll"));
 
-    delete root;
 }
 
 void TestPEParser::testFindMissingDLLsInTree()
 {
-    auto* root = createNode("app.exe", "C:/app/app.exe", true);
-    auto* present = createNode("Qt5Core.dll", "C:/app/Qt5Core.dll", true);
-    auto* missing = createNode("msvcp140.dll", "msvcp140.dll", false);
+    auto root = createNode("app.exe", "C:/app/app.exe", true);
+    auto present = createNode("Qt5Core.dll", "C:/app/Qt5Core.dll", true);
+    auto missing = createNode("msvcp140.dll", "msvcp140.dll", false);
     present->parent = root;
     missing->parent = root;
 
-    root->children.emplace_back(present);
-    root->children.emplace_back(missing);
+    root->children.append(present);
+    root->children.append(missing);
 
     ComparisonEngine::MissingReport report;
     report.missingDLLs << "msvcp140.dll";
 
-    QList<DependencyScanner::DependencyNode*> roots;
+    QList<DependencyScanner::NodePtr> roots;
     roots.append(root);
 
-    const QList<DependencyScanner::DependencyNode*> found =
+    const QList<DependencyScanner::NodePtr> found =
         ComparisonEngine::findMissingDLLsInTree(roots, report);
 
     QCOMPARE(found.size(), 1);
     QCOMPARE(found.first()->fileName.toLower(), QString("msvcp140.dll"));
     QVERIFY(!found.first()->exists);
-
-    delete root;
 }
 
 QTEST_APPLESS_MAIN(TestPEParser)

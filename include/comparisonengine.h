@@ -19,7 +19,7 @@ public:
 
     // 从目标机扫描结果生成缺失报告
     static MissingReport generateMissingReport(
-        const QList<DependencyScanner::DependencyNode*>& roots
+        const QList<DependencyScanner::NodePtr>& roots
     );
     
     // 保存缺失报告到文件
@@ -32,22 +32,22 @@ public:
     static MissingReport loadMissingReport(const QString& filePath);
     
     // 在依赖树中查找并标记缺失的DLL
-    static QList<DependencyScanner::DependencyNode*> findMissingDLLsInTree(
-        const QList<DependencyScanner::DependencyNode*>& roots,
+    static QList<DependencyScanner::NodePtr> findMissingDLLsInTree(
+        const QList<DependencyScanner::NodePtr>& roots,
         const MissingReport& report
     );
 
 private:
     // 递归查找DLL节点
     static void findDLLNodesByName(
-        DependencyScanner::DependencyNode* node,
+        const DependencyScanner::NodePtr& node,
         const QStringList& dllNames,
-        QList<DependencyScanner::DependencyNode*>& results
+        QList<DependencyScanner::NodePtr>& results
     );
     
     // 递归收集缺失的DLL
     static void collectMissingDLLs(
-        DependencyScanner::DependencyNode* node,
+        const DependencyScanner::NodePtr& node,
         QStringList& missingDLLs
     );
 };

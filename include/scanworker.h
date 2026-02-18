@@ -39,17 +39,16 @@ public:
 
 signals:
     void scanProgress(int current, int total, const QString& currentFile);
-    void scanFinished(QList<DependencyScanner::DependencyNode*> results);
+    void scanFinished(QList<DependencyScanner::NodePtr> results);
     void scanError(const QString& errorMessage);
 
 private slots:
     void onScanProgress(int current, int total, const QString& currentFile);
-    void onScanCompleted();
 
 private:
     DependencyScanner* m_scanner;
     QAtomicInt m_cancelled;
-    QList<DependencyScanner::DependencyNode*> m_results;
+    QList<DependencyScanner::NodePtr> m_results;
 };
 
 #endif // SCANWORKER_H

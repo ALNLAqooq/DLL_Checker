@@ -34,7 +34,7 @@ public:
 
     // 从高亮节点列表收集DLL（新方法）
     CollectionResult collectDLLsFromNodes(
-        const QList<DependencyScanner::DependencyNode*>& nodes,
+        const QList<DependencyScanner::NodePtr>& nodes,
         const QString& targetDirectory,
         ConflictResolution conflictMode = AskUser
     );

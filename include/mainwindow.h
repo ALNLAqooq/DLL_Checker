@@ -32,21 +32,21 @@ private slots:
     void onClearAll();
     void onTreeItemClicked(QTreeWidgetItem* item, int column);
     void onScanProgress(int current, int total, const QString& file);
-    void onScanFinished(QList<DependencyScanner::DependencyNode*> results);
+    void onScanFinished(QList<DependencyScanner::NodePtr> results);
     void onScanError(const QString& errorMessage);
     void onCancelScan();
 
 private:
     void setupUI();
-    void populateTree(DependencyScanner::DependencyNode* root);
+    void populateTree(const DependencyScanner::NodePtr& root);
     void showDLLDetails(QTreeWidgetItem* item);
-    QTreeWidgetItem* createTreeItem(DependencyScanner::DependencyNode* node);
+    QTreeWidgetItem* createTreeItem(const DependencyScanner::NodePtr& node);
     void expandMissingNodes(QTreeWidgetItem* item);  // 自动展开缺失项
     bool hasMissingDependencies(QTreeWidgetItem* item);  // 检查是否包含缺失项
     void highlightMissingDLLs(const QStringList& missingDLLs);  // 高亮显示缺失DLL
     void highlightTreeItem(QTreeWidgetItem* item, const QStringList& missingDLLs, 
-                          DependencyScanner::DependencyNode* node);  // 递归高亮
-    QList<DependencyScanner::DependencyNode*> getHighlightedNodes();  // 获取高亮节点
+                          const DependencyScanner::NodePtr& node);  // 递归高亮
+    QList<DependencyScanner::NodePtr> getHighlightedNodes();  // 获取高亮节点
     void clearAllData();  // 清空所有数据
     QString formatErrorWithSuggestion(const QString& errorMessage);  // 格式化错误信息并提供建议
     QString formatFileSize(qint64 bytes);  // 格式化文件大小
@@ -60,9 +60,9 @@ private:
 
     QThread* m_scanThread;
     ScanWorker* m_scanWorker;
-    QList<DependencyScanner::DependencyNode*> m_scanResults;
-    QList<DependencyScanner::DependencyNode*> m_highlightedNodes;
-    QMap<QTreeWidgetItem*, DependencyScanner::DependencyNode*> m_itemNodeMap;
+    QList<DependencyScanner::NodePtr> m_scanResults;
+    QList<DependencyScanner::NodePtr> m_highlightedNodes;
+    QMap<QTreeWidgetItem*, DependencyScanner::NodePtr> m_itemNodeMap;
     bool m_isScanning;
     bool m_isDestroying;
     qint64 m_scanStartTime;

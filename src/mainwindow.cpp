@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "reportgenerator.h"
 #include "dllcollector.h"
 #include "inputvalidator.h"
@@ -196,7 +196,6 @@ void MainWindow::onScanDirectory()
 
     m_treeWidget->clear();
     m_itemNodeMap.clear();
-    qDeleteAll(m_scanResults);
     m_scanResults.clear();
 
     m_isScanning = true;
@@ -251,6 +250,19 @@ void MainWindow::onScanSingleFile()
         return;
     }
 
+    InputValidator::ValidationResult validation =
+        InputValidator::validateFilePath(filePath, InputValidator::getValidFileExtensions());
+    if (validation != InputValidator::Valid) {
+        LOG_WARNING("MainWindow", QString("文件验证失败: %1 - %2")
+            .arg(filePath)
+            .arg(InputValidator::getErrorMessage(validation)));
+        QMessageBox::warning(this, tr("路径验证失败"),
+            tr("无法扫描该文件：\n%1\n\n原因：%2")
+                .arg(filePath)
+                .arg(InputValidator::getErrorMessage(validation)));
+        return;
+    }
+
     statusBar()->showMessage(tr("正在扫描文件: %1").arg(filePath));
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, 1);
@@ -258,7 +270,6 @@ void MainWindow::onScanSingleFile()
 
     m_treeWidget->clear();
     m_itemNodeMap.clear();
-    qDeleteAll(m_scanResults);
     m_scanResults.clear();
 
     m_isScanning = true;
@@ -355,7 +366,10 @@ void MainWindow::onImportMissingReport()
     
     // 步骤6: 显示结果（统计唯一的DLL名称）
     QSet<QString> uniqueDLLs;
-    for (const auto* node : m_highlightedNodes) {
+    for (const auto& node : m_highlightedNodes) {
+        if (!node) {
+            continue;
+        }
         uniqueDLLs.insert(node->fileName);
     }
     
@@ -365,7 +379,10 @@ void MainWindow::onImportMissingReport()
     
     int count = 0;
     QStringList displayedDLLs;
-    for (const auto* node : m_highlightedNodes) {
+    for (const auto& node : m_highlightedNodes) {
+        if (!node) {
+            continue;
+        }
         if (displayedDLLs.contains(node->fileName)) {
             continue; // 跳过重复的DLL
         }
@@ -511,7 +528,7 @@ void MainWindow::onScanProgress(int current, int total, const QString& file)
     statusBar()->showMessage(statusText);
 }
 
-void MainWindow::populateTree(DependencyScanner::DependencyNode* root)
+void MainWindow::populateTree(const DependencyScanner::NodePtr& root)
 {
     if (!root) return;
     
@@ -538,7 +555,7 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
         return;
     }
 
-    DependencyScanner::DependencyNode* node = it.value();
+    DependencyScanner::NodePtr node = it.value();
     if (!node) {
         m_detailPanel->setHtml(tr("<h3>DLL信息不可用</h3>"));
         return;
@@ -605,7 +622,7 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
     details += tr("<tr><td><b>依赖层级：</b></td><td>%1</td></tr>")
         .arg(node->depth);
     
-    if (node->parent) {
+    if (!node->parent.isNull()) {
         details += tr("<tr><td><b>被依赖：</b></td><td>是 (被 %1 个文件依赖)</td></tr>")
             .arg(1);
     } else {
@@ -629,7 +646,7 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
     m_detailPanel->setHtml(details);
 }
 
-QTreeWidgetItem* MainWindow::createTreeItem(DependencyScanner::DependencyNode* node)
+QTreeWidgetItem* MainWindow::createTreeItem(const DependencyScanner::NodePtr& node)
 {
     QTreeWidgetItem* item = new QTreeWidgetItem();
     item->setText(0, node->fileName);
@@ -651,7 +668,7 @@ QTreeWidgetItem* MainWindow::createTreeItem(DependencyScanner::DependencyNode* n
     
     // Add children
     for (const auto& child : node->children) {
-        item->addChild(createTreeItem(child.get()));
+        item->addChild(createTreeItem(child));
     }
     
     return item;
@@ -711,7 +728,7 @@ void MainWindow::highlightMissingDLLs(const QStringList& missingDLLs)
 }
 
 void MainWindow::highlightTreeItem(QTreeWidgetItem* item, const QStringList& missingDLLs, 
-                                   DependencyScanner::DependencyNode* node)
+                                   const DependencyScanner::NodePtr& node)
 {
     if (!item || !node) return;
     
@@ -742,13 +759,13 @@ void MainWindow::highlightTreeItem(QTreeWidgetItem* item, const QStringList& mis
     
     // 递归处理子节点
     for (int i = 0; i < item->childCount(); ++i) {
-        if (i < static_cast<int>(node->children.size())) {
-            highlightTreeItem(item->child(i), missingDLLs, node->children[i].get());
+        if (i < node->children.size()) {
+            highlightTreeItem(item->child(i), missingDLLs, node->children[i]);
         }
     }
 }
 
-QList<DependencyScanner::DependencyNode*> MainWindow::getHighlightedNodes()
+QList<DependencyScanner::NodePtr> MainWindow::getHighlightedNodes()
 {
     return m_highlightedNodes;
 }
@@ -759,7 +776,6 @@ void MainWindow::clearAllData()
     m_detailPanel->clear();
     m_itemNodeMap.clear();
     m_highlightedNodes.clear();
-    qDeleteAll(m_scanResults);
     m_scanResults.clear();
     statusBar()->showMessage(tr("数据已清空"));
 }
@@ -790,19 +806,19 @@ void MainWindow::onAutoCollectDLLs()
     }
     
     // 步骤1.5: 去重 - 每个DLL只保留一个节点
-    QMap<QString, DependencyScanner::DependencyNode*> uniqueNodes;
-    for (auto* node : m_highlightedNodes) {
-        if (!uniqueNodes.contains(node->fileName)) {
+    QMap<QString, DependencyScanner::NodePtr> uniqueNodes;
+    for (const auto& node : m_highlightedNodes) {
+        if (node && !uniqueNodes.contains(node->fileName)) {
             uniqueNodes.insert(node->fileName, node);
         }
     }
-    QList<DependencyScanner::DependencyNode*> nodesToCollect = uniqueNodes.values();
+    QList<DependencyScanner::NodePtr> nodesToCollect = uniqueNodes.values();
     
     // 步骤2: 显示高亮DLL列表预览
     QString previewText = tr("找到 %1 个高亮的 DLL 需要收集:\n\n").arg(nodesToCollect.size());
     int count = 0;
     qint64 totalSize = 0;
-    for (const auto* node : nodesToCollect) {
+    for (const auto& node : nodesToCollect) {
         if (count < 10) {
             QFileInfo fileInfo(node->filePath);
             qint64 fileSize = fileInfo.size();
@@ -926,7 +942,7 @@ void MainWindow::onAutoCollectDLLs()
     delete collector;
 }
 
-void MainWindow::onScanFinished(QList<DependencyScanner::DependencyNode*> results)
+void MainWindow::onScanFinished(QList<DependencyScanner::NodePtr> results)
 {
     if (m_isDestroying) {
         return;
@@ -943,12 +959,19 @@ void MainWindow::onScanFinished(QList<DependencyScanner::DependencyNode*> result
     m_scanResults = results;
     m_highlightedNodes.clear();
 
-    for (auto* root : m_scanResults) {
+    for (const auto& root : m_scanResults) {
         populateTree(root);
     }
 
-    statusBar()->showMessage(tr("扫描完成。找到 %1 个文件。").arg(m_scanResults.size()));
+    statusBar()->showMessage(tr("扫描完成。找到%1个文件。").arg(m_scanResults.size()));
+
     
+
+    if (m_scanThread && m_scanThread->isRunning()) {
+        m_scanThread->quit();
+        m_scanThread->wait(5000);
+    }
+
     m_scanThread = nullptr;
     m_scanWorker = nullptr;
 }
@@ -1040,6 +1063,12 @@ void MainWindow::onScanError(const QString& errorMessage)
     QMessageBox::critical(this, tr("扫描错误"), detailedError);
     statusBar()->showMessage(tr("扫描失败"));
     
+
+    if (m_scanThread && m_scanThread->isRunning()) {
+        m_scanThread->quit();
+        m_scanThread->wait(5000);
+    }
+
     m_scanThread = nullptr;
     m_scanWorker = nullptr;
 }

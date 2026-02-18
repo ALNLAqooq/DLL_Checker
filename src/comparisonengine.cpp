@@ -6,7 +6,7 @@
 #include <QSysInfo>
 
 ComparisonEngine::MissingReport ComparisonEngine::generateMissingReport(
-    const QList<DependencyScanner::DependencyNode*>& roots)
+    const QList<DependencyScanner::NodePtr>& roots)
 {
     MissingReport report;
     report.generatedTime = QDateTime::currentDateTime();
@@ -15,9 +15,9 @@ ComparisonEngine::MissingReport ComparisonEngine::generateMissingReport(
     QStringList missingDLLs;
     
     // 递归收集所有缺失的DLL
-    for (const auto* root : roots) {
+    for (const auto& root : roots) {
         if (root) {
-            collectMissingDLLs(const_cast<DependencyScanner::DependencyNode*>(root), missingDLLs);
+            collectMissingDLLs(root, missingDLLs);
         }
     }
     
@@ -29,7 +29,7 @@ ComparisonEngine::MissingReport ComparisonEngine::generateMissingReport(
 }
 
 void ComparisonEngine::collectMissingDLLs(
-    DependencyScanner::DependencyNode* node,
+    const DependencyScanner::NodePtr& node,
     QStringList& missingDLLs)
 {
     if (!node) return;
@@ -43,7 +43,7 @@ void ComparisonEngine::collectMissingDLLs(
     
     // 递归处理子节点
     for (const auto& child : node->children) {
-        collectMissingDLLs(child.get(), missingDLLs);
+        collectMissingDLLs(child, missingDLLs);
     }
 }
 
@@ -102,13 +102,13 @@ ComparisonEngine::MissingReport ComparisonEngine::loadMissingReport(const QStrin
     return report;
 }
 
-QList<DependencyScanner::DependencyNode*> ComparisonEngine::findMissingDLLsInTree(
-    const QList<DependencyScanner::DependencyNode*>& roots,
+QList<DependencyScanner::NodePtr> ComparisonEngine::findMissingDLLsInTree(
+    const QList<DependencyScanner::NodePtr>& roots,
     const MissingReport& report)
 {
-    QList<DependencyScanner::DependencyNode*> results;
+    QList<DependencyScanner::NodePtr> results;
     
-    for (auto* root : roots) {
+    for (const auto& root : roots) {
         if (root) {
             findDLLNodesByName(root, report.missingDLLs, results);
         }
@@ -118,9 +118,9 @@ QList<DependencyScanner::DependencyNode*> ComparisonEngine::findMissingDLLsInTre
 }
 
 void ComparisonEngine::findDLLNodesByName(
-    DependencyScanner::DependencyNode* node,
+    const DependencyScanner::NodePtr& node,
     const QStringList& dllNames,
-    QList<DependencyScanner::DependencyNode*>& results)
+    QList<DependencyScanner::NodePtr>& results)
 {
     if (!node) return;
     
@@ -133,6 +133,6 @@ void ComparisonEngine::findDLLNodesByName(
     
     // 递归处理子节点
     for (const auto& child : node->children) {
-        findDLLNodesByName(child.get(), dllNames, results);
+        findDLLNodesByName(child, dllNames, results);
     }
 }

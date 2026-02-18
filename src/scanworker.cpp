@@ -9,14 +9,11 @@ ScanWorker::ScanWorker(QObject *parent)
 {
     connect(m_scanner, &DependencyScanner::scanProgress,
             this, &ScanWorker::onScanProgress);
-    connect(m_scanner, &DependencyScanner::scanCompleted,
-            this, &ScanWorker::onScanCompleted);
 }
 
 ScanWorker::~ScanWorker()
 {
-    // Note: Ownership of m_results has been transferred to MainWindow via signals
-    // So we don't delete them here to avoid double-free
+    // Results are shared via QSharedPointer, no manual deletion required.
     m_results.clear();
 }
 
@@ -31,9 +28,8 @@ void ScanWorker::scanFile(const QString& filePath, bool includeSystemDLLs)
     m_scanner->clearCache();
     emit scanProgress(0, 1, QFileInfo(filePath).fileName());
 
-    DependencyScanner::DependencyNode* node = m_scanner->scanFile(filePath, includeSystemDLLs);
+    DependencyScanner::NodePtr node = m_scanner->scanFile(filePath, includeSystemDLLs);
     if (node) {
-        qDeleteAll(m_results);
         m_results.clear();
         m_results.append(node);
         emit scanProgress(1, 1, QFileInfo(filePath).fileName());
@@ -76,7 +72,6 @@ void ScanWorker::scanDirectory(const QString& dirPath, bool recursive, bool incl
         return;
     }
 
-    qDeleteAll(m_results);
     m_results.clear();
     m_results = m_scanner->scanDirectory(dirPath, recursive, includeSystemDLLs);
     LOG_INFO("ScanWorker", "目录扫描完成");
@@ -103,7 +98,6 @@ void ScanWorker::scanDirectoryParallel(const QString& dirPath, bool recursive, b
         return;
     }
 
-    qDeleteAll(m_results);
     m_results.clear();
     m_results = m_scanner->scanDirectoryParallel(dirPath, recursive, includeSystemDLLs, threadCount);
     LOG_INFO("ScanWorker", "并行目录扫描完成");
@@ -129,9 +123,4 @@ void ScanWorker::onScanProgress(int current, int total, const QString& currentFi
     }
 
     emit scanProgress(current, total, currentFile);
-}
-
-void ScanWorker::onScanCompleted()
-{
-    emit scanFinished(m_results);
 }

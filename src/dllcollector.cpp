@@ -14,7 +14,7 @@ DLLCollector::~DLLCollector()
 }
 
 DLLCollector::CollectionResult DLLCollector::collectDLLsFromNodes(
-    const QList<DependencyScanner::DependencyNode*>& nodes,
+    const QList<DependencyScanner::NodePtr>& nodes,
     const QString& targetDirectory,
     ConflictResolution conflictMode)
 {
@@ -28,8 +28,10 @@ DLLCollector::CollectionResult DLLCollector::collectDLLsFromNodes(
     if (!targetDir.exists()) {
         if (!targetDir.mkpath(".")) {
             // 无法创建目标目录
-            for (const auto* node : nodes) {
-                result.failedFiles[node->fileName] = tr("Failed to create target directory");
+            for (const auto& node : nodes) {
+                if (node) {
+                    result.failedFiles[node->fileName] = tr("Failed to create target directory");
+                }
             }
             result.failedCount = result.totalFiles;
             emit copyCompleted(result);
@@ -39,8 +41,14 @@ DLLCollector::CollectionResult DLLCollector::collectDLLsFromNodes(
 
     // 遍历所有需要复制的DLL节点
     int current = 0;
-    for (const auto* node : nodes) {
+    for (const auto& node : nodes) {
         current++;
+
+        if (!node) {
+            result.failedFiles[tr("Unknown")] = tr("Null dependency node");
+            result.failedCount++;
+            continue;
+        }
         
         QString dllName = node->fileName;
         QString sourcePath = node->filePath;
