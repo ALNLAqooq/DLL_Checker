@@ -10,6 +10,7 @@
         <file>icons/check.svg</file>
         <file>icons/branch-closed.svg</file>
         <file>icons/branch-open.svg</file>
+        <file>icons/logo.png</file>
         <file>style.qss</file>
     </qresource>
 </RCC>

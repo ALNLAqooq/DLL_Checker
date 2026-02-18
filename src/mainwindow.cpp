@@ -59,6 +59,7 @@ MainWindow::~MainWindow()
 void MainWindow::setupUI()
 {
     setWindowTitle(tr("DLL依赖检查工具"));
+    setWindowIcon(QIcon(":/icons/logo.png"));
     resize(1200, 800);
     
     // Create central widget
@@ -547,49 +548,49 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
 
     details += tr("<h4>基本信息</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
-    details += tr("<tr><td width='120'><b>文件名:</b></td><td>%1</td></tr>").arg(node->fileName);
-    details += tr("<tr><td><b>完整路径:</b></td><td>%1</td></tr>").arg(node->filePath);
+    details += tr("<tr><td width='150'><b>文件名：</b></td><td>%1</td></tr>").arg(node->fileName);
+    details += tr("<tr><td><b>完整路径：</b></td><td>%1</td></tr>").arg(node->filePath);
     
     QFileInfo fileInfo(node->filePath);
     if (fileInfo.exists()) {
-        details += tr("<tr><td><b>文件大小:</b></td><td>%1</td></tr>")
+        details += tr("<tr><td><b>文件大小：</b></td><td>%1</td></tr>")
             .arg(formatFileSize(fileInfo.size()));
-        details += tr("<tr><td><b>修改时间:</b></td><td>%1</td></tr>")
+        details += tr("<tr><td><b>修改时间：</b></td><td>%1</td></tr>")
             .arg(fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
     }
     
     QString archStr = PEParser::architectureToString(node->arch);
-    details += tr("<tr><td><b>架构:</b></td><td>%1</td></tr>").arg(archStr);
+    details += tr("<tr><td><b>架构：</b></td><td>%1</td></tr>").arg(archStr);
     details += tr("</table>");
 
     details += tr("<h4>版本信息</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
-    details += tr("<tr><td width='120'><b>文件版本:</b></td><td>%1</td></tr>")
+    details += tr("<tr><td width='150'><b>文件版本：</b></td><td>%1</td></tr>")
         .arg(node->fileVersion.isEmpty() ? tr("未知") : node->fileVersion);
-    details += tr("<tr><td><b>产品版本:</b></td><td>%1</td></tr>")
+    details += tr("<tr><td><b>产品版本：</b></td><td>%1</td></tr>")
         .arg(node->productVersion.isEmpty() ? tr("未知") : node->productVersion);
     details += tr("</table>");
 
     details += tr("<h4>状态信息</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
     if (node->exists) {
-        details += tr("<tr><td width='120'><b>状态:</b></td><td><font color='green'>正常</font></td></tr>");
+        details += tr("<tr><td width='150'><b>状态：</b></td><td><font color='green'>正常</font></td></tr>");
     } else {
-        details += tr("<tr><td width='120'><b>状态:</b></td><td><font color='red'>缺失</font></td></tr>");
+        details += tr("<tr><td width='150'><b>状态：</b></td><td><font color='red'>缺失</font></td></tr>");
         details += tr("<tr><td></td><td><i>该DLL文件不存在于系统中，可能导致程序无法正常运行。</i></td></tr>");
     }
     
     if (node->archMismatch) {
-        details += tr("<tr><td><b>架构:</b></td><td><font color='orange'>不匹配</font></td></tr>");
+        details += tr("<tr><td><b>架构：</b></td><td><font color='orange'>不匹配</font></td></tr>");
         details += tr("<tr><td></td><td><i>DLL架构与主程序不匹配，可能导致加载失败。</i></td></tr>");
     } else {
-        details += tr("<tr><td><b>架构:</b></td><td>匹配</td></tr>");
+        details += tr("<tr><td><b>架构：</b></td><td>匹配</td></tr>");
     }
     details += tr("</table>");
 
     details += tr("<h4>依赖关系</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
-    details += tr("<tr><td width='120'><b>依赖DLL数:</b></td><td>%1</td></tr>")
+    details += tr("<tr><td width='150'><b>依赖DLL数：</b></td><td>%1</td></tr>")
         .arg(node->children.size());
     
     int missingChildren = 0;
@@ -598,17 +599,17 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
             missingChildren++;
         }
     }
-    details += tr("<tr><td><b>缺失依赖:</b></td><td>%1</td></tr>")
+    details += tr("<tr><td><b>缺失依赖：</b></td><td>%1</td></tr>")
         .arg(missingChildren);
     
-    details += tr("<tr><td><b>依赖层级:</b></td><td>%1</td></tr>")
+    details += tr("<tr><td><b>依赖层级：</b></td><td>%1</td></tr>")
         .arg(node->depth);
     
     if (node->parent) {
-        details += tr("<tr><td><b>被依赖:</b></td><td>是 (被 %1 个文件依赖)</td></tr>")
+        details += tr("<tr><td><b>被依赖：</b></td><td>是 (被 %1 个文件依赖)</td></tr>")
             .arg(1);
     } else {
-        details += tr("<tr><td><b>被依赖:</b></td><td>否 (根节点)</td></tr>");
+        details += tr("<tr><td><b>被依赖：</b></td><td>否 (根节点)</td></tr>");
     }
     details += tr("</table>");
 
