@@ -42,7 +42,7 @@ private:
                                           QMap<QString, QStringList>& missingMap);
     static void collectMissingDLLsRecursive(const DependencyScanner::NodePtr& node,
                                            QStringList& missingDLLs);
-    static QString generateTreeText(const DependencyScanner::NodePtr& node, int indent);
+    static QString generateTreeText(const DependencyScanner::NodePtr& node, int indent, bool escapeForHtml);
 };
 
 #endif // REPORTGENERATOR_H

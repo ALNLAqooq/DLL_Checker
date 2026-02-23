@@ -30,8 +30,10 @@ public:
 
     ~LoadedImageGuard()
     {
-        if (m_valid && m_image) {
-            UnMapAndLoad(m_image);
+        if (m_image) {
+            if (m_valid) {
+                UnMapAndLoad(m_image);
+            }
             delete m_image;
         }
     }

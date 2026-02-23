@@ -1,10 +1,11 @@
-﻿#include "dependencyscanner.h"
+#include "dependencyscanner.h"
 #include "peparser.h"
 #include "pathresolver.h"
 #include "logger.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QDirIterator>
+#include <QFile>
 #include <QFuture>
 #include <QtConcurrent>
 #include <QtConcurrentMap>
@@ -13,6 +14,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QMetaObject>
+#include <QSet>
 #include <utility>
 
 DependencyScanner::DependencyScanner(QObject *parent)
@@ -378,8 +380,72 @@ DependencyScanner::NodePtr DependencyScanner::scanFileWithCustomStack(
     
     // Remove from scanning stack
     popCurrent();
-    
+
     return node;
+}
+
+QList<DependencyScanner::MissingDLLInfo> DependencyScanner::prescanMissingDLLs(
+    const QList<NodePtr>& nodes, bool includeSystemDLLs)
+{
+    QList<MissingDLLInfo> result;
+
+    QSet<QString> processedDLLs;
+    QSet<QString> missingDLLs;
+
+    for (const NodePtr& root : nodes) {
+        if (!root) continue;
+
+        collectMissingDLLsRecursive(root, missingDLLs, processedDLLs);
+    }
+
+    for (const QString& dllName : missingDLLs) {
+        MissingDLLInfo info;
+        info.dllName = dllName;
+        info.foundOnSystem = false;
+
+        QStringList systemPaths = PathResolver::getSystemSearchPaths();
+        for (const QString& sysPath : systemPaths) {
+            QString fullPath = QDir(sysPath).filePath(dllName);
+            if (QFile::exists(fullPath)) {
+                info.foundOnSystem = true;
+                info.systemPath = fullPath;
+
+                PEParser::PEInfo peInfo = PEParser::parsePEFile(fullPath);
+                if (peInfo.isValid) {
+                    info.arch = peInfo.arch;
+                    info.requiredDependencies = peInfo.dependencies;
+                }
+                break;
+            }
+        }
+
+        result.append(info);
+    }
+
+    return result;
+}
+
+void DependencyScanner::collectMissingDLLsRecursive(
+    const NodePtr& node,
+    QSet<QString>& missingDLLs,
+    QSet<QString>& processedDLLs)
+{
+    if (!node) return;
+
+    QString dllName = node->fileName.toLower();
+
+    if (processedDLLs.contains(dllName)) {
+        return;
+    }
+    processedDLLs.insert(dllName);
+
+    if (!node->exists && !node->fileName.isEmpty()) {
+        missingDLLs.insert(dllName);
+    }
+
+    for (const NodePtr& child : node->children) {
+        collectMissingDLLsRecursive(child, missingDLLs, processedDLLs);
+    }
 }
 
 bool DependencyScanner::hasCircularDependency(const DependencyScanner::NodePtr& node)

@@ -62,6 +62,20 @@ public:
     // Check if cancelled
     bool isCancelled() const;
 
+    // Pre-scan missing DLLs: analyze their dependencies even if they don't exist locally
+    // This helps identify all required DLLs in one pass
+    struct MissingDLLInfo {
+        QString dllName;
+        QStringList requiredDependencies;
+        PEParser::Architecture arch;
+        bool foundOnSystem;
+        QString systemPath;
+    };
+
+    QList<MissingDLLInfo> prescanMissingDLLs(
+        const QList<NodePtr>& nodes,
+        bool includeSystemDLLs = false);
+
 signals:
     void scanProgress(int current, int total, const QString& currentFile);
     void scanCompleted();
@@ -72,6 +86,7 @@ private:
     NodePtr scanFileWithCustomStack(const QString& filePath, const QString& appDir,
                                    const NodePtr& parent, int depth, bool includeSystemDLLs,
                                    QStringList& customStack, QSet<QString>& customSet);
+    void collectMissingDLLsRecursive(const NodePtr& node, QSet<QString>& missingDLLs, QSet<QString>& processedDLLs);
     QHash<QString, QWeakPointer<DependencyNode>> m_cache;
     QMutex m_cacheMutex;
     QStringList m_scanningStack;

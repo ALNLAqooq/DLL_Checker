@@ -561,31 +561,35 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
         return;
     }
 
+    auto esc = [](const QString& value) {
+        return value.toHtmlEscaped();
+    };
+
     QString details = tr("<h3>DLL 详细信息</h3>");
 
     details += tr("<h4>基本信息</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
-    details += tr("<tr><td width='150'><b>文件名：</b></td><td>%1</td></tr>").arg(node->fileName);
-    details += tr("<tr><td><b>完整路径：</b></td><td>%1</td></tr>").arg(node->filePath);
+    details += tr("<tr><td width='150'><b>文件名：</b></td><td>%1</td></tr>").arg(esc(node->fileName));
+    details += tr("<tr><td><b>完整路径：</b></td><td>%1</td></tr>").arg(esc(node->filePath));
     
     QFileInfo fileInfo(node->filePath);
     if (fileInfo.exists()) {
         details += tr("<tr><td><b>文件大小：</b></td><td>%1</td></tr>")
             .arg(formatFileSize(fileInfo.size()));
         details += tr("<tr><td><b>修改时间：</b></td><td>%1</td></tr>")
-            .arg(fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
+            .arg(esc(fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss")));
     }
     
     QString archStr = PEParser::architectureToString(node->arch);
-    details += tr("<tr><td><b>架构：</b></td><td>%1</td></tr>").arg(archStr);
+    details += tr("<tr><td><b>架构：</b></td><td>%1</td></tr>").arg(esc(archStr));
     details += tr("</table>");
 
     details += tr("<h4>版本信息</h4>");
     details += tr("<table border='0' cellpadding='5' cellspacing='0'>");
     details += tr("<tr><td width='150'><b>文件版本：</b></td><td>%1</td></tr>")
-        .arg(node->fileVersion.isEmpty() ? tr("未知") : node->fileVersion);
+        .arg(esc(node->fileVersion.isEmpty() ? tr("未知") : node->fileVersion));
     details += tr("<tr><td><b>产品版本：</b></td><td>%1</td></tr>")
-        .arg(node->productVersion.isEmpty() ? tr("未知") : node->productVersion);
+        .arg(esc(node->productVersion.isEmpty() ? tr("未知") : node->productVersion));
     details += tr("</table>");
 
     details += tr("<h4>状态信息</h4>");
@@ -636,8 +640,8 @@ void MainWindow::showDLLDetails(QTreeWidgetItem* item)
         for (const auto& child : node->children) {
             if (!child->exists) {
                 details += tr("<li><font color='red'>%1</font> (%2)</li>")
-                    .arg(child->fileName)
-                    .arg(child->filePath);
+                    .arg(esc(child->fileName))
+                    .arg(esc(child->filePath));
             }
         }
         details += tr("</ul>");

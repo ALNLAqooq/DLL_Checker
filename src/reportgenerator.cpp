@@ -11,6 +11,26 @@
 #include <QFile>
 #include <QTextStream>
 
+namespace {
+QString htmlEscape(const QString& value)
+{
+    return value.toHtmlEscaped();
+}
+
+QString csvEscape(const QString& value)
+{
+    QString escaped = value;
+    if (!escaped.isEmpty()) {
+        const QChar first = escaped.at(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@') {
+            escaped.prepend('\'');
+        }
+    }
+    escaped.replace("\"", "\"\"");
+    return escaped;
+}
+}
+
 QString ReportGenerator::generateMissingReport(const QList<DependencyScanner::NodePtr>& roots,
                                               ReportFormat format)
 {
@@ -81,9 +101,14 @@ bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::No
             stream << "<h2>Missing Dependencies Report</h2>";
             stream << "<table><tr><th>Missing DLL</th><th>Required By</th></tr>";
             for (auto it = missingMap.begin(); it != missingMap.end(); ++it) {
+                QStringList escapedRequiredBy;
+                escapedRequiredBy.reserve(it.value().size());
+                for (const QString& value : it.value()) {
+                    escapedRequiredBy.append(htmlEscape(value));
+                }
                 stream << QString("<tr><td><b>%1</b></td><td>%2</td></tr>")
-                              .arg(it.key())
-                              .arg(it.value().join("<br>"));
+                              .arg(htmlEscape(it.key()))
+                              .arg(escapedRequiredBy.join("<br>"));
             }
             stream << "</table></body></html>";
             break;
@@ -91,33 +116,33 @@ bool ReportGenerator::writeMissingReportToFile(const QList<DependencyScanner::No
         case CSV:
             stream << "Missing DLL,Required By\n";
             for (auto it = missingMap.begin(); it != missingMap.end(); ++it) {
+                QStringList escapedRequiredBy;
+                escapedRequiredBy.reserve(it.value().size());
+                for (const QString& value : it.value()) {
+                    escapedRequiredBy.append(csvEscape(value));
+                }
                 stream << QString("\"%1\",\"%2\"\n")
-                              .arg(it.key())
-                              .arg(it.value().join("; "));
+                              .arg(csvEscape(it.key()))
+                              .arg(escapedRequiredBy.join("; "));
             }
             break;
 
         case JSON: {
-            stream << "{\n  \"missing_dependencies\": [\n";
-            bool firstEntry = true;
+            QJsonArray missingArray;
             for (auto it = missingMap.begin(); it != missingMap.end(); ++it) {
-                if (!firstEntry) {
-                    stream << ",\n";
+                QJsonObject entry;
+                entry["dll"] = it.key();
+                QJsonArray requiredBy;
+                for (const QString& value : it.value()) {
+                    requiredBy.append(value);
                 }
-                firstEntry = false;
-                stream << "    {\n";
-                stream << QString("      \"dll\": \"%1\",\n").arg(it.key());
-                stream << "      \"required_by\": [";
-                for (int i = 0; i < it.value().size(); ++i) {
-                    stream << QString("\"%1\"").arg(it.value().at(i));
-                    if (i < it.value().size() - 1) {
-                        stream << ", ";
-                    }
-                }
-                stream << "]\n";
-                stream << "    }";
+                entry["required_by"] = requiredBy;
+                missingArray.append(entry);
             }
-            stream << "\n  ]\n}";
+            QJsonObject root;
+            root["missing_dependencies"] = missingArray;
+            QJsonDocument doc(root);
+            stream << QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
             break;
         }
 
@@ -189,7 +214,7 @@ QString ReportGenerator::generateTargetMissingReport(const QList<DependencyScann
             report += "<ul>";
             
             for (const QString& dll : missingDLLs) {
-                report += QString("<li>%1</li>").arg(dll);
+                report += QString("<li>%1</li>").arg(htmlEscape(dll));
             }
             
             report += "</ul></body></html>";
@@ -198,7 +223,7 @@ QString ReportGenerator::generateTargetMissingReport(const QList<DependencyScann
         case CSV:
             report = "Missing DLL\n";
             for (const QString& dll : missingDLLs) {
-                report += QString("\"%1\"\n").arg(dll);
+                report += QString("\"%1\"\n").arg(csvEscape(dll));
             }
             break;
             
@@ -250,13 +275,13 @@ QString ReportGenerator::generateDependencyTreeReport(const DependencyScanner::N
                     ".mismatch { color: #ff9800; }"
                     "</style></head><body>";
             report += "<h2>Dependency Tree Report</h2>";
-            report += "<pre>" + generateTreeText(root, 0) + "</pre>";
+            report += "<pre>" + generateTreeText(root, 0, true) + "</pre>";
             report += "</body></html>";
             break;
             
         default: // PlainText
             report = "=== Dependency Tree Report ===\n\n";
-    report += generateTreeText(root, 0);
+    report += generateTreeText(root, 0, false);
     break;
     }
     
@@ -290,7 +315,7 @@ void ReportGenerator::collectMissingDependencies(const DependencyScanner::NodePt
     }
 }
 
-QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node, int indent)
+QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node, int indent, bool escapeForHtml)
 {
     if (!node) return QString();
     
@@ -303,7 +328,8 @@ QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node
         result += "└─ ";
     }
     
-    result += node->fileName;
+    const QString name = escapeForHtml ? htmlEscape(node->fileName) : node->fileName;
+    result += name;
     
     // Add status indicators
     if (!node->exists) {
@@ -311,7 +337,8 @@ QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node
     } else {
         result += QString(" [%1]").arg(PEParser::architectureToString(node->arch));
         if (!node->fileVersion.isEmpty()) {
-            result += QString(" v%1").arg(node->fileVersion);
+            const QString version = escapeForHtml ? htmlEscape(node->fileVersion) : node->fileVersion;
+            result += QString(" v%1").arg(version);
         }
         if (node->archMismatch) {
             result += " [ARCH MISMATCH]";
@@ -322,7 +349,7 @@ QString ReportGenerator::generateTreeText(const DependencyScanner::NodePtr& node
     
     // Add children
     for (const auto& child : node->children) {
-        result += generateTreeText(child, indent + 1);
+        result += generateTreeText(child, indent + 1, escapeForHtml);
     }
     
     return result;
