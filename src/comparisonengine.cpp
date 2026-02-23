@@ -146,6 +146,7 @@ ComparisonEngine::EnhancedMissingReport ComparisonEngine::generateEnhancedMissin
     EnhancedMissingReport report;
     report.generatedTime = QDateTime::currentDateTime();
     report.targetMachine = QSysInfo::machineHostName();
+    report.sourceMachine = report.targetMachine;
 
     QSet<QString> missingDLLs;
     QSet<QString> msvcDLLs;
